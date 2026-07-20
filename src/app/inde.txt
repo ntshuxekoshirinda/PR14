@@ -1,3 +1,10 @@
+<Pressable 
+          style={[styles.filterButton, muscle === '' && styles.activeFilterButton]}
+          onPress={() => setMuscle('')}
+        >
+          <Text style={[styles.filterText, muscle === '' && styles.activeFilterText]}></Text>
+        </Pressable>
+
 import { useState } from 'react';
 import { View, FlatList, ActivityIndicator, Pressable, Text, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';

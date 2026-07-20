@@ -1,52 +1,77 @@
 import React from 'react';
-import { Pressable, ImageBackground, Text, StyleSheet, ViewStyle } from "react-native";
+import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Image } from 'expo-image';
 
 interface ExerciseMainProps {
-    title: string;
-    imageSource: any;
-    onPress: () => void;
-    style?: ViewStyle;
+  title: string;
+  imageSource: { uri: string };
+  onPress: () => void;
 }
-export function ExerciseMain({title, imageSource, onPress, style }: ExerciseMainProps){
-    return (
-        <Pressable onPress={onPress} style={[styles.buttonWrapper, style]}>
-            <Image 
-  source={imageSource} 
-  style={{ width: '100%', height: '100%' }} // Ensure your container has size
-  contentFit="cover" // equivalent to resizeMode: 'cover'
-  transition={200} // Smooth fade-in
-/>
-        </Pressable>
-    );
-}
+
+const THUMBNAIL_SIZE = 70;
+
+export const ExerciseMain: React.FC<ExerciseMainProps> = ({ title, imageSource, onPress }) => {
+  return (
+    <Pressable onPress={onPress} style={styles.cardContainer}>
+      <View style={styles.contentRow}>
+        {/* Animated GIF thumbnail */}
+        <Image
+          source={imageSource}
+          style={styles.thumbnail}
+          contentFit="cover"
+          transition={200}
+        />
+        
+        {/* Exercise name */}
+        <Text style={styles.title} numberOfLines={2}>
+          {title}
+        </Text>
+        
+        
+      </View>
+    </Pressable>
+  );
+};
 
 const styles = StyleSheet.create({
-    buttonWrapper: {
-        height: 150,
-        width: '100%',
-        marginBottom: 20,
-        borderRadius: 15,
-        overflow: 'hidden'
-    },
-
-    imageBackground: {
-        flex: 1,
-        width: '100%',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-
-    imageStyle: {
-        borderRadius: 15,
-    },
-
-    text: {
-        color: 'white',
-        fontSize: 24,
-        fontWeight: 'bold',
-        textShadowColor: 'rgba(0, 0, 0, 0.75)',
-        textShadowOffset: { width: 1, height: 1},
-        textShadowRadius: 3,
-    },
+  cardContainer: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 15,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  contentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  thumbnail: {
+    width: THUMBNAIL_SIZE,
+    height: THUMBNAIL_SIZE,
+    borderRadius: 8,
+    marginRight: 15,
+  },
+  title: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginRight: 10,
+  },
+  checkmarkCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#7CB342',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkmarkText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
 });

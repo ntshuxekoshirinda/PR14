@@ -1,137 +1,134 @@
-import { useState, useEffect } from 'react';
-import { View, FlatList, ActivityIndicator, Pressable, Text, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, FlatList, StyleSheet, ActivityIndicator, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useExercises } from '../hooks/useExercises'; // Ensure this path matches your structure
-import { ExerciseMain } from '../components/ExerciseMain'; // Ensure this path matches your structure
-import { getDb } from '../services/dbService';
-
-
-
+import { useExercises } from '../hooks/useExercises';
+import { ExerciseMain } from '../components/ExerciseMain';
 
 export default function HomeScreen() {
-  const [muscle, setMuscle] = useState('triceps');
-  // Our custom hook manages the DB logic and loading state
+  const [muscle, setMuscle] = useState('abs');
   const { data, loading, error } = useExercises(muscle);
   const router = useRouter();
 
-  useEffect(() => {
-      const debugTargets = async () => {
-          try {
-              const db = await getDb();
-              const targets = await db.getAllAsync('SELECT DISTINCT target FROM exercises');
-              console.log("Available targets in DB:", targets);
-          } catch (e) {
-              console.log("Debug failed:", e);
-          }
-      };
-      debugTargets();
-  }, []);
-  // 1. Handle Loading
-  if (loading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color="#0000ff" />
-        <Text style={{ marginTop: 10 }}>Loading {muscle} exercises...</Text>
-      </View>
-    );
-  }
+  const BASE_URL = 'https://raw.githubusercontent.com/ntshuxekoshirinda/exercises-dataset/main/';
 
-  // 2. Handle Error
-  if (error) {
-    return (
-      <View style={styles.center}>
-        <Text style={styles.errorText}>{error}</Text>
-      </View>
-    );
-  }
-console.log("Current muscle:", muscle);
-console.log("Data count:", data?.length);
   return (
     <View style={styles.container}>
-      {/* Category Toggle Tabs */}
-      <View style={styles.tabContainer}>
+      {/* Muscle Filter Selector for Abs and Triceps */}
+      <View style={styles.filterContainer}>
         <Pressable 
-            onPress={() => setMuscle('triceps')} 
-            style={[styles.tab, muscle === 'triceps' && styles.activeTab]}
+          style={[styles.filterButton, muscle === 'abs' && styles.activeFilterButton]}
+          onPress={() => setMuscle('abs')}
         >
-            <Text style={muscle === 'triceps' ? styles.activeTabText : styles.tabText}>triceps</Text>
+          <Text style={[styles.filterText, muscle === 'abs' && styles.activeFilterText]}>Abs</Text>
         </Pressable>
         <Pressable 
-            onPress={() => setMuscle('abs')} 
-            style={[styles.tab, muscle === 'abs' && styles.activeTab]}
+          style={[styles.filterButton, muscle === 'triceps' && styles.activeFilterButton]}
+          onPress={() => setMuscle('triceps')}
         >
-            <Text style={muscle === 'abs' ? styles.activeTabText : styles.tabText}>Abs</Text>
+          <Text style={[styles.filterText, muscle === 'triceps' && styles.activeFilterText]}>Triceps</Text>
+        </Pressable>
+        <Pressable 
+          style={[styles.filterButton, muscle === 'quads' && styles.activeFilterButton]}
+          onPress={() => setMuscle('quads')}
+        >
+          <Text style={[styles.filterText, muscle === 'quads' && styles.activeFilterText]}>Quads</Text>
+        </Pressable>
+        <Pressable 
+          style={[styles.filterButton, muscle === 'lats' && styles.activeFilterButton]}
+          onPress={() => setMuscle('lats')}
+        >
+          <Text style={[styles.filterText, muscle === 'lats' && styles.activeFilterText]}>Lats</Text>
+        </Pressable>
+        <Pressable 
+          style={[styles.filterButton, muscle === 'glutes' && styles.activeFilterButton]}
+          onPress={() => setMuscle('glutes')}
+        >
+          <Text style={[styles.filterText, muscle === 'glutes' && styles.activeFilterText]}>Glutes</Text>
         </Pressable>
       </View>
 
-      {/* Exercise List */}
-      <FlatList
-  data={data}
-  keyExtractor={(item) => item.id}
-  contentContainerStyle={styles.listContent}
-  renderItem={({ item }) => {
-    // Construct the full URL
-    const BASE_URL = 'https://raw.githubusercontent.com/ntshuxekoshirinda/exercises-dataset/main/';
-    const imageUrl = `${BASE_URL}${item.image}`;
+      {/* Main Content Area */}
+      {loading ? (
+        <View style={styles.centerContainer}>
+          <ActivityIndicator size="large" color="#7CB342" />
+        </View>
+      ) : error ? (
+        <View style={styles.centerContainer}>
+          <Text style={styles.errorText}>{error}</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={data}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.listContent}
+          renderItem={({ item }) => {
+            const gifUrl = `${BASE_URL}${item.gif_url}`;
 
-    return (
-      <View style={styles.cardWrapper}>
-        <ExerciseMain
-          title={item.name}
-          // Use the constructed URL here
-          imageSource={{ uri: imageUrl }} 
-          onPress={() => router.push({ 
-            pathname: '/exercise', 
-            params: { id: item.id } 
-          })}
+            return (
+              <View style={styles.cardWrapper}>
+                <ExerciseMain
+                  title={item.name}
+                  imageSource={{ uri: gifUrl }}
+                  onPress={() => router.push({ 
+                    pathname: '/exercise', 
+                    params: { id: item.id } 
+                  })}
+                />
+              </View>
+            );
+          }}
         />
-      </View>
-    );
-  }}
-/>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: '#f5f5f5',
-    paddingTop: 50 // Adjust based on your header needs
+  container: {
+    flex: 1,
+    backgroundColor: '#f8f9fa',
   },
-  center: { 
-    flex: 1, 
-    justifyContent: 'center', 
-    alignItems: 'center' 
+  filterContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    paddingVertical: 15,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
   },
-  tabContainer: { 
-    flexDirection: 'row', 
-    paddingHorizontal: 20, 
-    marginBottom: 20 
-  },
-  tab: { 
-    paddingVertical: 10, 
-    paddingHorizontal: 20, 
-    marginRight: 10,
+  filterButton: {
+    paddingHorizontal: 24,
+    paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: '#ddd'
+    backgroundColor: '#f1f3f5',
+    marginHorizontal: 8,
   },
-  activeTab: { 
-    backgroundColor: '#007AFF' 
+  activeFilterButton: {
+    backgroundColor: '#7CB342',
   },
-  tabText: { color: '#333' },
-  activeTabText: { color: '#fff', fontWeight: 'bold' },
-  listContent: { 
-    paddingHorizontal: 20, 
-    paddingBottom: 20 
+  filterText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#495057',
   },
-  cardWrapper: { 
-    height: 150, // Matches the height defined in ExerciseMain
-    marginBottom: 20,
-    width: '100%'
+  activeFilterText: {
+    color: '#fff',
   },
-  errorText: { 
-    color: 'red', 
-    fontSize: 16 
-  }
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  listContent: {
+    paddingVertical: 20,
+  },
+  cardWrapper: {
+    marginBottom: 15,
+    width: '100%',
+    paddingHorizontal: 20,
+  },
+  errorText: {
+    color: 'red',
+    fontSize: 16,
+  },
 });
