@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
+import * as Speech from 'expo-speech';
 import { getDb } from '../services/dbService';
 
 export default function AbsCircuitScreen() {
@@ -25,7 +26,7 @@ export default function AbsCircuitScreen() {
         );
         setExercises(results);
         if (results.length > 0) {
-          setIsActive(true); // Automatically start timer when loaded
+          setIsActive(true);
         }
       } catch (e) {
         console.error("Failed to load abs circuit exercises:", e);
@@ -36,22 +37,41 @@ export default function AbsCircuitScreen() {
     fetchAbsExercises();
   }, []);
 
-  // Countdown timer effect
+  // Speak exercise name and instructions when the current exercise changes
+  useEffect(() => {
+    if (exercises.length > 0 && exercises[currentIndex]) {
+      const currentEx = exercises[currentIndex];
+      const exerciseName = currentEx.name;
+      const instructionsText = currentEx.instructions_en ? ` Instructions: ${currentEx.instructions_en}` : '';
+
+      Speech.stop(); // Stop any ongoing speech
+      Speech.speak(`Next exercise: ${exerciseName}.${instructionsText}`, {
+        language: 'en',
+        rate: 0.95, // Slightly slower so instructions are easy to follow
+      });
+    }
+  }, [currentIndex, exercises]);
+
+  // Countdown timer effect with voice cues
   useEffect(() => {
     let interval: any = null;
     if (isActive && !completed && exercises.length > 0) {
       interval = setInterval(() => {
         setTimeLeft((prev) => {
+          if (prev === 11) {
+            Speech.speak("10 seconds remaining", { rate: 1.1 });
+          }
+
           if (prev > 1) {
             return prev - 1;
           } else {
-            // Time's up for current exercise, jump to next or complete
             if (currentIndex < exercises.length - 1) {
               setCurrentIndex((idx) => idx + 1);
-              return 60; // Reset clock to 60 seconds
+              return 60; // Reset clock
             } else {
               setIsActive(false);
               setCompleted(true);
+              Speech.speak("Circuit complete. Great job!", { rate: 1.0 });
               return 0;
             }
           }
@@ -69,42 +89,29 @@ export default function AbsCircuitScreen() {
     );
   }
 
-  if (exercises.length === 0) {
-    return (
-      <View style={styles.centerContainer}>
-        <Text style={styles.errorText}>No abs exercises found in the database.</Text>
-        <Pressable style={styles.button} onPress={() => router.back()}>
-          <Text style={styles.buttonText}>Go Back</Text>
-        </Pressable>
-      </View>
-    );
-  }
-
   if (completed) {
     return (
       <View style={styles.centerContainer}>
         <Text style={styles.completedTitle}>Circuit Complete! 🎉</Text>
         <Text style={styles.completedSubtitle}>You crushed all 6 abs exercises.</Text>
-        <Pressable style={styles.button} onPress={() => router.back()}>
+        <Pressable style={styles.button} onPress={() => { Speech.stop(); router.back(); }}>
           <Text style={styles.buttonText}>Return Home</Text>
         </Pressable>
       </View>
     );
   }
 
-  const currentExercise = exercises[currentIndex];
+  const currentExercise = exercises[currentIndex] || {};
   const gifUrl = `${BASE_URL}${currentExercise.gif_url}`;
 
   return (
     <View style={styles.container}>
-      {/* Progress Header */}
       <View style={styles.progressHeader}>
         <Text style={styles.progressText}>
           Exercise {currentIndex + 1} of {exercises.length}
         </Text>
       </View>
 
-      {/* Exercise Card */}
       <View style={styles.card}>
         <Image
           source={{ uri: gifUrl }}
@@ -115,17 +122,22 @@ export default function AbsCircuitScreen() {
         <Text style={styles.exerciseName}>{currentExercise.name}</Text>
       </View>
 
-      {/* Clock Display */}
       <View style={styles.timerContainer}>
         <Text style={styles.timerText}>{timeLeft}s</Text>
         <Text style={styles.timerSubText}>Remaining</Text>
       </View>
 
-      {/* Control Buttons */}
       <View style={styles.controlsRow}>
         <Pressable 
           style={[styles.controlButton, { backgroundColor: isActive ? '#f0ad4e' : '#7CB342' }]} 
-          onPress={() => setIsActive(!isActive)}
+          onPress={() => {
+            setIsActive(!isActive);
+            if (!isActive) Speech.speak("Resumed");
+            else {
+              Speech.pause();
+              Speech.speak("Paused");
+            }
+          }}
         >
           <Text style={styles.controlButtonText}>{isActive ? 'Pause' : 'Resume'}</Text>
         </Pressable>
@@ -133,6 +145,7 @@ export default function AbsCircuitScreen() {
         <Pressable 
           style={[styles.controlButton, { backgroundColor: '#6c757d' }]} 
           onPress={() => {
+            Speech.stop();
             if (currentIndex < exercises.length - 1) {
               setCurrentIndex(currentIndex + 1);
               setTimeLeft(60);
@@ -259,11 +272,5 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
-  },
-  errorText: {
-    fontSize: 16,
-    color: 'red',
-    textAlign: 'center',
-    marginBottom: 20,
   },
 });

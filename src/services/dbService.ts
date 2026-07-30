@@ -45,7 +45,7 @@ export async function setupDatabase() {
     `);
 }
 
-export async function fetchExercisesFromGitHub(): Promise<Exercise[]> {
+export async function fetchExercisesFromGitHub(): Promise<any[]> {
     const GITHUB_URL = 'https://raw.githubusercontent.com/ntshuxekoshirinda/exercises-dataset/main/data/exercises.json';
     const response = await fetch(GITHUB_URL);
     if (!response.ok) throw new Error('Failed to fetch data from GitHub');
@@ -55,33 +55,53 @@ export async function fetchExercisesFromGitHub(): Promise<Exercise[]> {
 export async function seedDatabase() {
     const db = await getDb();
     
-    // DROP the table to guarantee a fresh start
+    // Wipe and re-create to ensure fresh schema mapping
     await db.execAsync('DROP TABLE IF EXISTS exercises');
-    await setupDatabase(); // Re-create the table
+    await setupDatabase();
 
     const exercises = await fetchExercisesFromGitHub();
 
     await db.withTransactionAsync(async () => {
         for (const item of exercises) {
+            // Safely extract localized instructions from the JSON's nested object structure
+            const instructionsEn = typeof item.instructions === 'object' && item.instructions !== null
+                ? (item.instructions as any).en || ''
+                : typeof item.instructions === 'string'
+                    ? (() => { try { return JSON.parse(item.instructions).en || ''; } catch { return ''; } })()
+                    : '';
+
+            const instructionsTr = typeof item.instructions === 'object' && item.instructions !== null
+                ? (item.instructions as any).tr || ''
+                : typeof item.instructions === 'string'
+                    ? (() => { try { return JSON.parse(item.instructions).tr || ''; } catch { return ''; } })()
+                    : '';
+
             await db.runAsync(
                 `INSERT INTO exercises (id, name, category, body_part, equipment, instructions_en, instructions_tr, muscle_group, secondary_muscles, target, image, gif_url, created_at) 
                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                 [
-                    item.id, item.name, item.category, item.body_part, item.equipment,
-                    item.instructions_en, item.instructions_tr, item.muscle_group,
-                    JSON.stringify(item.secondary_muscles), item.target, item.image, item.gif_url, item.created_at
+                    item.id, 
+                    item.name, 
+                    item.category, 
+                    item.body_part, 
+                    item.equipment,
+                    instructionsEn, 
+                    instructionsTr, 
+                    item.muscle_group,
+                    JSON.stringify(item.secondary_muscles || []), 
+                    item.target, 
+                    item.image, 
+                    item.gif_url, 
+                    item.created_at
                 ]
             );
         }
     });
-    console.log("Database seeded successfully!");
+    console.log("Database seeded successfully with instructions!");
 }
 
 export async function getExercisesByMuscle(muscle: string): Promise<Exercise[]> {
     const db = await getDb();
-    
-    // Using LIKE with % wildcards to find matches even if there's whitespace
-    // Or if the value is slightly different
     const results = await db.getAllAsync<any>(
         'SELECT * FROM exercises WHERE LOWER(target) LIKE LOWER(?)', 
         [`%${muscle}%`] 
@@ -91,16 +111,4 @@ export async function getExercisesByMuscle(muscle: string): Promise<Exercise[]> 
         ...item,
         secondary_muscles: item.secondary_muscles ? JSON.parse(item.secondary_muscles) : []
     }));
-}
-
-// DEBUGGING HELPER: Run this in your app to verify data exists
-export async function debugDatabase() {
-    const db = await getDb();
-    const count = await db.getFirstAsync<{count: number}>('SELECT COUNT(*) as count FROM exercises');
-    const sample = await db.getAllAsync<any>('SELECT * FROM exercises LIMIT 1');
-    
-    console.log("--- DB DEBUG ---");
-    console.log("Total rows:", count?.count);
-    console.log("Sample Data:", sample);
-    console.log("----------------");
 }
