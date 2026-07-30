@@ -1,84 +1,58 @@
-import React, { useState } from 'react';
-import { View, Text, FlatList, StyleSheet, ActivityIndicator, Pressable } from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet, Pressable, ImageBackground } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useExercises } from '../hooks/useExercises';
-import { ExerciseMain } from '../components/ExerciseMain';
 
 export default function HomeScreen() {
-  const [muscle, setMuscle] = useState('abs');
-  const { data, loading, error } = useExercises(muscle);
   const router = useRouter();
-
-  const BASE_URL = 'https://raw.githubusercontent.com/ntshuxekoshirinda/exercises-dataset/main/';
 
   return (
     <View style={styles.container}>
-      {/* Muscle Filter Selector for Abs and Triceps */}
-      <View style={styles.filterContainer}>
-        <Pressable 
-          style={[styles.filterButton, muscle === 'abs' && styles.activeFilterButton]}
-          onPress={() => setMuscle('abs')}
-        >
-          <Text style={[styles.filterText, muscle === 'abs' && styles.activeFilterText]}>Abs</Text>
-        </Pressable>
-        <Pressable 
-          style={[styles.filterButton, muscle === 'triceps' && styles.activeFilterButton]}
-          onPress={() => setMuscle('triceps')}
-        >
-          <Text style={[styles.filterText, muscle === 'triceps' && styles.activeFilterText]}>Triceps</Text>
-        </Pressable>
-        <Pressable 
-          style={[styles.filterButton, muscle === 'quads' && styles.activeFilterButton]}
-          onPress={() => setMuscle('quads')}
-        >
-          <Text style={[styles.filterText, muscle === 'quads' && styles.activeFilterText]}>Quads</Text>
-        </Pressable>
-        <Pressable 
-          style={[styles.filterButton, muscle === 'lats' && styles.activeFilterButton]}
-          onPress={() => setMuscle('lats')}
-        >
-          <Text style={[styles.filterText, muscle === 'lats' && styles.activeFilterText]}>Lats</Text>
-        </Pressable>
-        <Pressable 
-          style={[styles.filterButton, muscle === 'glutes' && styles.activeFilterButton]}
-          onPress={() => setMuscle('glutes')}
-        >
-          <Text style={[styles.filterText, muscle === 'glutes' && styles.activeFilterText]}>Glutes</Text>
-        </Pressable>
-      </View>
+      <Text style={styles.headerTitle}>Select Your Path</Text>
 
-      {/* Main Content Area */}
-      {loading ? (
-        <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color="#7CB342" />
-        </View>
-      ) : error ? (
-        <View style={styles.centerContainer}>
-          <Text style={styles.errorText}>{error}</Text>
-        </View>
-      ) : (
-        <FlatList
-          data={data}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContent}
-          renderItem={({ item }) => {
-            const gifUrl = `${BASE_URL}${item.gif_url}`;
+      {/* Button Card 1: Links to workout.tsx with workout.png background */}
+      <Pressable 
+        style={styles.cardContainer} 
+        onPress={() => router.push('/workout')}
+      >
+        <ImageBackground 
+          source={require('../../assets/images/icon.png')} 
+          style={styles.backgroundImage}
+          imageStyle={styles.imageStyle}
+        >
+          <View style={styles.overlay}>
+            <Text style={styles.cardTitle}>Hypertrophy Workout</Text>
+            <Text style={styles.cardSubtitle}>Skinny-Fat Recomp Routine & Structured Exercises</Text>
+          </View>
+        </ImageBackground>
+      </Pressable>
 
-            return (
-              <View style={styles.cardWrapper}>
-                <ExerciseMain
-                  title={item.name}
-                  imageSource={{ uri: gifUrl }}
-                  onPress={() => router.push({ 
-                    pathname: '/exercise', 
-                    params: { id: item.id } 
-                  })}
-                />
-              </View>
-            );
-          }}
-        />
-      )}
+      {/* Button Card 3: Abs Timer Circuit */}
+<Pressable 
+  style={styles.cardContainer} 
+  onPress={() => router.push('/abs-circuit')}
+>
+  <View style={[styles.overlay, { flex: 1, justifyContent: 'flex-end' }]}>
+    <Text style={styles.cardTitle}>Abs 60s Circuit Timer</Text>
+    <Text style={styles.cardSubtitle}>6 Exercises • Automated 60-Second Countdown</Text>
+  </View>
+</Pressable>
+
+      {/* Button Card 2: Links to allworkouts.tsx with allworkouts.png background */}
+      <Pressable 
+        style={styles.cardContainer} 
+        onPress={() => router.push('/allworkouts')}
+      >
+        <ImageBackground 
+          source={require('../../assets/images/icon.png')} 
+          style={styles.backgroundImage}
+          imageStyle={styles.imageStyle}
+        >
+          <View style={styles.overlay}>
+            <Text style={styles.cardTitle}>All Workouts Database</Text>
+            <Text style={styles.cardSubtitle}>Browse All Exercises by Muscle Category</Text>
+          </View>
+        </ImageBackground>
+      </Pressable>
     </View>
   );
 }
@@ -87,48 +61,46 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f8f9fa',
-  },
-  filterContainer: {
-    flexDirection: 'row',
+    padding: 20,
     justifyContent: 'center',
-    paddingVertical: 15,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
   },
-  filterButton: {
-    paddingHorizontal: 24,
-    paddingVertical: 10,
-    borderRadius: 20,
-    backgroundColor: '#f1f3f5',
-    marginHorizontal: 8,
+  headerTitle: {
+    fontSize: 26,
+    fontWeight: 'bold',
+    color: '#212529',
+    textAlign: 'center',
+    marginBottom: 30,
   },
-  activeFilterButton: {
-    backgroundColor: '#7CB342',
+  cardContainer: {
+    height: 180,
+    borderRadius: 16,
+    overflow: 'hidden',
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 5,
   },
-  filterText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#495057',
-  },
-  activeFilterText: {
-    color: '#fff',
-  },
-  centerContainer: {
+  backgroundImage: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: 'flex-end',
   },
-  listContent: {
-    paddingVertical: 20,
+  imageStyle: {
+    borderRadius: 16,
   },
-  cardWrapper: {
-    marginBottom: 15,
-    width: '100%',
-    paddingHorizontal: 20,
+  overlay: {
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    padding: 20,
   },
-  errorText: {
-    color: 'red',
-    fontSize: 16,
+  cardTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#ffffff',
+    marginBottom: 6,
+  },
+  cardSubtitle: {
+    fontSize: 13,
+    color: '#e9ecef',
   },
 });

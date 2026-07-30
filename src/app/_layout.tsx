@@ -1,28 +1,23 @@
-import { useEffect, useState } from 'react';
-import { Tabs } from 'expo-router';
+// src/app/_layout.tsx
+import { useEffect } from 'react';
+import { Stack } from 'expo-router';
 import { setupDatabase, seedDatabase } from '../services/dbService';
-import { ActivityIndicator, View } from 'react-native';
 
 export default function RootLayout() {
-  const [isReady, setIsReady] = useState(false);
-
   useEffect(() => {
     async function init() {
-      try {
-        await setupDatabase();
-        await seedDatabase();
-        setIsReady(true); // Only set true after seeding finishes
-      } catch (e) {
-        console.error("DB Init failed", e);
-      }
+      await setupDatabase();
+      await seedDatabase(); // This ensures data is fetched and seeded on startup
     }
     init();
   }, []);
 
-  if (!isReady) {
-    return <View style={{flex:1, justifyContent:'center'}}><ActivityIndicator size="large"/></View>;
-  }
-
-  // Render your Tabs only when ready
-  return <Tabs />;
+  return (
+    <Stack>
+      <Stack.Screen name="index" options={{ title: 'Home' }} />
+      <Stack.Screen name="workout" options={{ title: 'Workout Routine' }} />
+      <Stack.Screen name="allworkouts" options={{ title: 'All Workouts' }} />
+      <Stack.Screen name="exercise" options={{ title: 'Exercise Details' }} />
+    </Stack>
+  );
 }
