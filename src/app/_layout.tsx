@@ -19,7 +19,7 @@ class ErrorBoundary extends Component<{ children: ReactNode }, State> {
     console.error("Uncaught error:", error, errorInfo);
   }
 
-  render() {
+  render() { 
     if (this.state.hasError) {
       return (
         <View style={styles.container}>
