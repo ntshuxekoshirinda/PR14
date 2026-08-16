@@ -13,13 +13,6 @@
     "android": {
       
       "permisiions": ["INTERNET"],
-      "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
-      },
-      "predictiveBackGestureEnabled": false,
       "package": "com.ntshuxekoshirinda.PR14"
     },
     "web": {
