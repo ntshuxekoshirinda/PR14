@@ -53,51 +53,57 @@ export async function fetchExercisesFromGitHub(): Promise<any[]> {
 }
 
 export async function seedDatabase() {
-    const db = await getDb();
-    
-    // Wipe and re-create to ensure fresh schema mapping
-    await db.execAsync('DROP TABLE IF EXISTS exercises');
-    await setupDatabase();
-
-    const exercises = await fetchExercisesFromGitHub();
-
-    await db.withTransactionAsync(async () => {
-        for (const item of exercises) {
-            // Safely extract localized instructions from the JSON's nested object structure
-            const instructionsEn = typeof item.instructions === 'object' && item.instructions !== null
-                ? (item.instructions as any).en || ''
-                : typeof item.instructions === 'string'
-                    ? (() => { try { return JSON.parse(item.instructions).en || ''; } catch { return ''; } })()
-                    : '';
-
-            const instructionsTr = typeof item.instructions === 'object' && item.instructions !== null
-                ? (item.instructions as any).tr || ''
-                : typeof item.instructions === 'string'
-                    ? (() => { try { return JSON.parse(item.instructions).tr || ''; } catch { return ''; } })()
-                    : '';
-
-            await db.runAsync(
-                `INSERT INTO exercises (id, name, category, body_part, equipment, instructions_en, instructions_tr, muscle_group, secondary_muscles, target, image, gif_url, created_at) 
-                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-                [
-                    item.id, 
-                    item.name, 
-                    item.category, 
-                    item.body_part, 
-                    item.equipment,
-                    instructionsEn, 
-                    instructionsTr, 
-                    item.muscle_group,
-                    JSON.stringify(item.secondary_muscles || []), 
-                    item.target, 
-                    item.image, 
-                    item.gif_url, 
-                    item.created_at
-                ]
-            );
+    try {
+        const db = await getDb();
+        
+        // Check if data already exists so we don't unnecessarily re-fetch every launch
+        const rowCount = await db.getFirstAsync<{ count: number }>('SELECT COUNT(*) as count FROM exercises');
+        if (rowCount && rowCount.count > 0) {
+            return; // Already seeded, skip fetch
         }
-    });
-    console.log("Database seeded successfully with instructions!");
+
+        // DROP the table to guarantee a fresh start if empty
+        await db.execAsync('DROP TABLE IF EXISTS exercises');
+        await setupDatabase();
+
+        const exercises = await fetchExercisesFromGitHub();
+
+        await db.withTransactionAsync(async () => {
+            for (const item of exercises) {
+                const instructionsEn = typeof item.instructions === 'object' && item.instructions !== null
+                    ? (item.instructions as any).en || ''
+                    : '';
+
+                const instructionsTr = typeof item.instructions === 'object' && item.instructions !== null
+                    ? (item.instructions as any).tr || ''
+                    : '';
+
+                await db.runAsync(
+                    `INSERT INTO exercises (id, name, category, body_part, equipment, instructions_en, instructions_tr, muscle_group, secondary_muscles, target, image, gif_url, created_at) 
+                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                    [
+                        item.id, 
+                        item.name, 
+                        item.category, 
+                        item.body_part, 
+                        item.equipment,
+                        instructionsEn, 
+                        instructionsTr, 
+                        item.muscle_group,
+                        JSON.stringify(item.secondary_muscles || []), 
+                        item.target, 
+                        item.image, 
+                        item.gif_url, 
+                        item.created_at
+                    ]
+                );
+            }
+        });
+        console.log("Database seeded successfully with instructions!");
+    } catch (error) {
+        console.error("Seeding failed (app will run with empty/existing local data):", error);
+        // Prevent crash by catching the error gracefully
+    }
 }
 
 export async function getExercisesByMuscle(muscle: string): Promise<Exercise[]> {
