@@ -1,7 +1,7 @@
 name: Build Android APK
 
 on:
-  workflow_dispatch: # Allows you to trigger the build manually from GitHub
+  workflow_dispatch: 
 
 jobs:
   build:
@@ -11,10 +11,10 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Setup Node.js (LTS v20)
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: '20' 
           cache: 'npm'
 
       - name: Setup Java JDK 17
@@ -27,7 +27,7 @@ jobs:
         run: npm install --legacy-peer-deps
 
       - name: Run Expo Prebuild
-        run: npx expo prebuild --platform android --no-interactive
+        run: npx expo prebuild --platform android 
 
       - name: Build APK with Gradle
         run: |
