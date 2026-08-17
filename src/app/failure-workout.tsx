@@ -1,14 +1,29 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ActivityIndicator, ScrollView } from 'react-native';
 import { Image } from 'expo-image';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as Speech from 'expo-speech';
 import { getDb } from '../services/dbService';
 
-export default function WorkoutPlanScreen() {
+// Map regular names to biological database targets and unique theme colors, including Chest
+const MUSCLE_GROUPS: Record<string, { dbTargets: string, color: string }> = {
+  'Chest': { dbTargets: "'pectorals'", color: '#ff7043' }, // Orange
+  'Back': { dbTargets: "'lats', 'upper back', 'spine'", color: '#42a5f5' }, // Blue
+  'Legs': { dbTargets: "'quads', 'glutes', 'hamstrings', 'calves'", color: '#ab47bc' }, // Purple
+  'Shoulders': { dbTargets: "'delts', 'traps'", color: '#ef5350' }, // Red
+  'Arms': { dbTargets: "'biceps', 'triceps', 'forearms'", color: '#26a69a' }, // Teal
+  'Core': { dbTargets: "'abs'", color: '#fbc02d' }, // Gold
+};
+
+export default function FailureWorkoutScreen() {
+  const { group } = useLocalSearchParams<{ group: string }>();
+  
+  const safeGroup = group && MUSCLE_GROUPS[group] ? group : 'Chest'; 
+  const { dbTargets, color: themeColor } = MUSCLE_GROUPS[safeGroup];
+
   const [exercises, setExercises] = useState<any[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [timeLeft, setTimeLeft] = useState(120); // 120 seconds duration per exercise
+  const [timeLeft, setTimeLeft] = useState(120);
   const [isActive, setIsActive] = useState(false);
   const [loading, setLoading] = useState(true);
   const [completed, setCompleted] = useState(false);
@@ -16,50 +31,40 @@ export default function WorkoutPlanScreen() {
 
   const BASE_URL = 'https://raw.githubusercontent.com/ntshuxekoshirinda/exercises-dataset/main/';
 
-  // Fetch 10 random exercises daily using the phone's date as a seed reference
   useEffect(() => {
-    async function fetchDailyRoutineExercises() {
+    async function fetchDynamicRoutine() {
       try {
         const db = await getDb();
-        
-        // Generate a date string (YYYY-MM-DD) from the system clock to ensure daily rotation reference
-        const today = new Date();
-        const dateString = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-
-        // Fetch 10 random hypertrophy target exercises from local SQLite database
         const results = await db.getAllAsync<any>(
-          `SELECT * FROM exercises WHERE LOWER(target) IN ('abs', 'triceps', 'pectorals', 'lats') ORDER BY RANDOM() LIMIT 10`
+          `SELECT * FROM exercises WHERE LOWER(target) IN (${dbTargets}) ORDER BY RANDOM()`
         );
-        
         setExercises(results);
         if (results.length > 0) {
           setIsActive(true);
         }
       } catch (e) {
-        console.error("Failed to load daily workout routine:", e);
+        console.error(`Failed to load ${safeGroup} workout routine:`, e);
       } finally {
         setLoading(false);
       }
     }
-    fetchDailyRoutineExercises();
-  }, []);
+    fetchDynamicRoutine();
+  }, [dbTargets]);
 
-  // Speak exercise name, rep target, and instructions when the current exercise changes
   useEffect(() => {
     if (exercises.length > 0 && exercises[currentIndex]) {
       const currentEx = exercises[currentIndex];
       const exerciseName = currentEx.name;
       const instructionsText = currentEx.instructions_en ? ` Instructions: ${currentEx.instructions_en}` : '';
 
-      Speech.stop(); // Stop any ongoing speech
-      Speech.speak(`Next exercise: ${exerciseName}. Target: 20 reps within 120 seconds.${instructionsText}`, {
+      Speech.stop();
+      Speech.speak(`Next ${safeGroup.toLowerCase()} exercise: ${exerciseName}. Objective: Train to failure within 120 seconds.${instructionsText}`, {
         language: 'en',
         rate: 0.95,
       });
     }
-  }, [currentIndex, exercises]);
+  }, [currentIndex, exercises, safeGroup]);
 
-  // 120-second countdown timer effect with voice cues
   useEffect(() => {
     let interval: any = null;
     if (isActive && !completed && exercises.length > 0) {
@@ -74,11 +79,11 @@ export default function WorkoutPlanScreen() {
           } else {
             if (currentIndex < exercises.length - 1) {
               setCurrentIndex((idx) => idx + 1);
-              return 120; // Reset clock to 120s for next exercise
+              return 120;
             } else {
               setIsActive(false);
               setCompleted(true);
-              Speech.speak("Workout complete. Great job on your daily routine!", { rate: 1.0 });
+              Speech.speak(`Workout complete. Incredible job pushing your ${safeGroup.toLowerCase()} to failure!`, { rate: 1.0 });
               return 0;
             }
           }
@@ -86,25 +91,25 @@ export default function WorkoutPlanScreen() {
       }, 1000);
     }
     return () => clearInterval(interval);
-  }, [isActive, currentIndex, completed, exercises]);
+  }, [isActive, currentIndex, completed, exercises, safeGroup]);
 
   if (loading) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#7CB342" />
+        <ActivityIndicator size="large" color={themeColor} />
       </View>
     );
   }
 
   if (completed) {
     return (
-      <View style={styles.centerContainer}>
-        <Text style={styles.completedTitle}>Workout Complete! 🎉</Text>
-        <Text style={styles.completedSubtitle}>You crushed all 10 exercises for today's routine.</Text>
-        <Pressable style={styles.button} onPress={() => { Speech.stop(); router.back(); }}>
+      <ScrollView contentContainerStyle={styles.centerContainer}>
+        <Text style={styles.completedTitle}>{safeGroup} Workout Complete! 🔥</Text>
+        <Text style={styles.completedSubtitle}>You pushed all {safeGroup.toLowerCase()} exercises to failure today.</Text>
+        <Pressable style={[styles.button, { backgroundColor: themeColor }]} onPress={() => { Speech.stop(); router.back(); }}>
           <Text style={styles.buttonText}>Return Home</Text>
         </Pressable>
-      </View>
+      </ScrollView>
     );
   }
 
@@ -112,7 +117,7 @@ export default function WorkoutPlanScreen() {
   const gifUrl = `${BASE_URL}${currentExercise.gif_url}`;
 
   return (
-    <View style={styles.container}>
+    <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.progressHeader}>
         <Text style={styles.progressText}>
           Exercise {currentIndex + 1} of {exercises.length}
@@ -128,11 +133,10 @@ export default function WorkoutPlanScreen() {
         />
         <Text style={styles.exerciseName}>{currentExercise.name}</Text>
         
-        {/* Dual Metric Badge: Reps + Time Target */}
         <View style={styles.targetBadgeRow}>
           <View style={styles.targetBadge}>
-            <Text style={styles.targetBadgeValue}>20</Text>
-            <Text style={styles.targetBadgeLabel}>Target Reps</Text>
+            <Text style={styles.targetBadgeValue}>Failure</Text>
+            <Text style={styles.targetBadgeLabel}>Objective</Text>
           </View>
           <View style={styles.targetBadgeDivider} />
           <View style={styles.targetBadge}>
@@ -143,13 +147,13 @@ export default function WorkoutPlanScreen() {
       </View>
 
       <View style={styles.timerContainer}>
-        <Text style={styles.timerText}>{timeLeft}s</Text>
+        <Text style={[styles.timerText, { color: themeColor }]}>{timeLeft}s</Text>
         <Text style={styles.timerSubText}>Time Remaining</Text>
       </View>
 
       <View style={styles.controlsRow}>
         <Pressable 
-          style={[styles.controlButton, { backgroundColor: isActive ? '#f0ad4e' : '#7CB342' }]} 
+          style={[styles.controlButton, { backgroundColor: isActive ? '#f0ad4e' : themeColor }]} 
           onPress={() => {
             setIsActive(!isActive);
             if (!isActive) {
@@ -179,19 +183,19 @@ export default function WorkoutPlanScreen() {
           <Text style={styles.controlButtonText}>Skip</Text>
         </Pressable>
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    flexGrow: 1,
     backgroundColor: '#f8f9fa',
     padding: 20,
     justifyContent: 'space-between',
   },
   centerContainer: {
-    flex: 1,
+    flexGrow: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
@@ -199,7 +203,7 @@ const styles = StyleSheet.create({
   },
   progressHeader: {
     alignItems: 'center',
-    marginTop: 10,
+    marginVertical: 10,
   },
   progressText: {
     fontSize: 16,
@@ -217,6 +221,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+    marginVertical: 10,
   },
   gifImage: {
     width: '100%',
@@ -274,11 +279,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+    marginVertical: 10,
   },
   timerText: {
     fontSize: 56,
     fontWeight: 'bold',
-    color: '#7CB342',
   },
   timerSubText: {
     fontSize: 14,
@@ -288,7 +293,7 @@ const styles = StyleSheet.create({
   controlsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 10,
+    marginVertical: 15,
   },
   controlButton: {
     flex: 1,
@@ -316,7 +321,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   button: {
-    backgroundColor: '#7CB342',
     paddingVertical: 14,
     paddingHorizontal: 30,
     borderRadius: 12,
@@ -326,4 +330,4 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
-});     
+});

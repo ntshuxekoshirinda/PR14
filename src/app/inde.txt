@@ -28,6 +28,9 @@ export default function HomeScreen() {
     );
   }
 
+  arm, back,abs, chest, shoulder, legs
+
+
   // 2. Handle Error
   if (error) {
     return (

@@ -132,10 +132,11 @@ export default function AbsCircuitScreen() {
           style={[styles.controlButton, { backgroundColor: isActive ? '#f0ad4e' : '#7CB342' }]} 
           onPress={() => {
             setIsActive(!isActive);
-            if (!isActive) Speech.speak("Resumed");
-            else {
-              Speech.pause();
-              Speech.speak("Paused");
+            if (!isActive) {
+              Speech.speak("Resumed");
+            } else {
+                Speech.stop(); 
+                Speech.speak("Paused");
             }
           }}
         >
