@@ -33,7 +33,7 @@ export default function HomeScreen() {
         </ImageBackground>
       </Pressable>
 
-      {/* Button Card: Hypertrophy Body Weight Workout */}
+      {/* Button Card: Hypertrophy Body Weight Workout 
       <Pressable 
         style={styles.cardContainer} 
         onPress={() => router.push('/bodyweight-workout')}
@@ -48,7 +48,7 @@ export default function HomeScreen() {
             <Text style={styles.cardSubtitle}>Zero Equipment Required • 20 Reps / 120s Timer</Text>
           </View>
         </ImageBackground>
-      </Pressable>
+      </Pressable> */}
 
       {/* Button Card: Chest Workout (To Failure) */}
       <Pressable 
@@ -65,7 +65,7 @@ export default function HomeScreen() {
             <Text style={styles.cardSubtitle}>Pectoral Focus • Train to Failure / 120s Timer</Text>
           </View>
         </ImageBackground>
-      </Pressable>
+      </Pressable> 
 
       {/* Button Card: Back Workout (To Failure) */}
       <Pressable 
